@@ -8,16 +8,258 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
-const MAX_RECORDING_TIME = 15; // Максимальное время записи в секундах
+const MAX_RECORDING_TIME = 15;
 
-// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ МОДУЛЯ - не сбрасываются при React Strict Mode remount
-let globalHasAutoStarted = false;
-let globalIsRecording = false;
-let globalAutoStartTimeout = null;
-let globalTimerId = null;
-let globalMediaRecorder = null;
-let globalAudioChunks = [];
-let globalStream = null;
+// =====================================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ МОДУЛЯ
+// Не сбрасываются при React Strict Mode remount
+// =====================================
+let g_hasAutoStarted = false;
+let g_isRecording = false;
+let g_autoStartTimeout = null;
+let g_timerId = null;
+let g_mediaRecorder = null;
+let g_audioChunks = [];
+let g_stream = null;
+let g_startTime = null;
+
+// Глобальная функция распознавания
+const recognizeAudioGlobal = async (audioBlob, setters) => {
+  const { setError, setResult, setIsProcessing } = setters;
+  
+  try {
+    console.log('Recognizing audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type);
+    
+    if (audioBlob.size < 10000) {
+      console.error('File too small:', audioBlob.size, 'bytes');
+      setError('Записанный файл слишком мал (' + audioBlob.size + ' байт). Проверьте разрешения микрофона.');
+      setIsProcessing(false);
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'recording.webm');
+    
+    console.log('Sending to server...');
+    const response = await axios.post(`${API}/recognize`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000
+    });
+    
+    console.log('Recognition response:', response.data);
+    setResult(response.data);
+    
+    if (response.data.vibration_pattern && 'vibrate' in navigator) {
+      console.log('Starting vibration pattern:', response.data.vibration_pattern.length, 'elements');
+      navigator.vibrate(response.data.vibration_pattern);
+    }
+    
+  } catch (err) {
+    console.error('Recognition error:', err);
+    console.error('Error details:', err.response?.data);
+    const errorMsg = err.response?.data?.detail || err.message || 'Не удалось распознать музыку';
+    setError(errorMsg);
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+// Глобальная функция остановки записи
+const stopRecordingGlobal = (setters) => {
+  console.log('stopRecordingGlobal called, g_isRecording:', g_isRecording, 'state:', g_mediaRecorder?.state);
+  
+  // Останавливаем таймер СРАЗУ
+  if (g_timerId) {
+    clearTimeout(g_timerId);
+    g_timerId = null;
+    console.log('Global timer cleared');
+  }
+  
+  // Проверяем флаг и состояние MediaRecorder
+  if (g_isRecording && g_mediaRecorder && g_mediaRecorder.state === 'recording') {
+    console.log('Stopping global MediaRecorder...');
+    g_isRecording = false; // Сбрасываем флаг ДО остановки
+    g_mediaRecorder.stop();
+    setters.setIsRecording(false);
+    setters.setIsProcessing(true);
+  } else {
+    console.log('MediaRecorder not in recording state or already stopped');
+    g_isRecording = false;
+  }
+};
+
+// Глобальная функция начала записи
+const startRecordingGlobal = async (setters) => {
+  const { setIsRecording, setIsProcessing, setError, setResult, setRecordingTime } = setters;
+  
+  // Защита от двойного вызова
+  if (g_isRecording) {
+    console.log('Global recording already in progress, ignoring');
+    return;
+  }
+  
+  console.log('Starting global recording...');
+  g_isRecording = true;
+  
+  try {
+    setError(null);
+    setResult(null);
+    
+    // Вибрация при начале записи
+    if ('vibrate' in navigator) {
+      try {
+        navigator.vibrate(500);
+        console.log('✓ Vibration: Recording started');
+      } catch (e) {
+        console.log('Vibration blocked:', e.message);
+      }
+    }
+    
+    const constraints = /Android/i.test(navigator.userAgent) ? {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      }
+    } : {
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        sampleRate: 44100
+      }
+    };
+    
+    console.log('Requesting media with constraints:', constraints);
+    g_stream = await navigator.mediaDevices.getUserMedia(constraints);
+    console.log('✓ Media stream obtained');
+    
+    let mimeType = 'audio/webm';
+    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      mimeType = 'audio/webm;codecs=opus';
+    } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+      mimeType = 'audio/ogg;codecs=opus';
+    } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+      mimeType = 'audio/mp4';
+    }
+    
+    console.log('Using mime type:', mimeType);
+    
+    const audioBitsPerSecond = /Android/i.test(navigator.userAgent) ? 192000 : 128000;
+    console.log('Audio bitrate:', audioBitsPerSecond);
+    
+    g_audioChunks = [];
+    let chunksReceived = 0;
+    
+    g_mediaRecorder = new MediaRecorder(g_stream, {
+      mimeType: mimeType,
+      audioBitsPerSecond: audioBitsPerSecond
+    });
+    
+    g_mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0 && g_isRecording) {
+        chunksReceived++;
+        console.log(`Chunk ${chunksReceived}:`, event.data.size, 'bytes');
+        g_audioChunks.push(event.data);
+      }
+    };
+    
+    g_mediaRecorder.onstop = async () => {
+      console.log(`Recording stopped. Total chunks: ${chunksReceived}`);
+      
+      // Очищаем таймер если не очищен
+      if (g_timerId) {
+        clearTimeout(g_timerId);
+        g_timerId = null;
+      }
+      
+      if (g_audioChunks.length === 0) {
+        setError('Запись не содержит данных. Попробуйте еще раз.');
+        setIsProcessing(false);
+        g_stream?.getTracks().forEach(track => track.stop());
+        return;
+      }
+      
+      // Вибрация по окончании записи
+      if ('vibrate' in navigator) {
+        try {
+          navigator.vibrate(500);
+          console.log('✓ Vibration: Recording stopped, starting recognition');
+        } catch (e) {
+          console.log('Vibration blocked:', e.message);
+        }
+      }
+      
+      const audioBlob = new Blob(g_audioChunks, { type: mimeType });
+      console.log('Total audio size:', audioBlob.size, 'bytes from', g_audioChunks.length, 'chunks');
+      
+      if (audioBlob.size < 10000) {
+        setError('Записанный файл слишком мал. Убедитесь, что микрофон работает и попробуйте снова.');
+        setIsProcessing(false);
+        g_stream?.getTracks().forEach(track => track.stop());
+        return;
+      }
+      
+      await recognizeAudioGlobal(audioBlob, setters);
+      g_stream?.getTracks().forEach(track => track.stop());
+    };
+    
+    g_mediaRecorder.onerror = (event) => {
+      console.error('MediaRecorder error:', event.error);
+      setError('Ошибка записи: ' + event.error);
+      setIsRecording(false);
+      setIsProcessing(false);
+      g_isRecording = false;
+      g_stream?.getTracks().forEach(track => track.stop());
+    };
+    
+    // Очищаем предыдущий таймер
+    if (g_timerId) {
+      clearTimeout(g_timerId);
+      g_timerId = null;
+    }
+    
+    console.log('Starting MediaRecorder...');
+    g_mediaRecorder.start(1000);
+    setIsRecording(true);
+    setRecordingTime(0);
+    
+    console.log('MediaRecorder state:', g_mediaRecorder.state);
+    
+    // Таймер с проверкой флага
+    g_startTime = Date.now();
+    const maxDuration = MAX_RECORDING_TIME * 1000;
+    
+    const updateTimer = () => {
+      // Проверяем глобальный флаг
+      if (!g_isRecording) {
+        console.log('Timer stopped - g_isRecording is false');
+        return;
+      }
+      
+      const elapsed = Date.now() - g_startTime;
+      const elapsedSeconds = Math.floor(elapsed / 1000);
+      setRecordingTime(elapsedSeconds);
+      
+      if (elapsed >= maxDuration) {
+        console.log('Max recording time reached, stopping...');
+        stopRecordingGlobal(setters);
+        return;
+      }
+      
+      g_timerId = setTimeout(updateTimer, 100);
+    };
+    
+    g_timerId = setTimeout(updateTimer, 100);
+    
+  } catch (err) {
+    console.error('Error starting recording:', err);
+    setError('Не удалось получить доступ к микрофону. Разрешите доступ в настройках браузера.');
+    setIsRecording(false);
+    setIsProcessing(false);
+    g_isRecording = false;
+  }
+};
 
 function App() {
   const [isRecording, setIsRecording] = useState(false);
@@ -26,16 +268,8 @@ function App() {
   const [error, setError] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
   
-  // Refs для доступа к setState из глобальных функций
-  const settersRef = useRef({
-    setIsRecording,
-    setIsProcessing,
-    setError,
-    setResult,
-    setRecordingTime
-  });
-  
-  // Обновляем settersRef при каждом рендере
+  // Объект с setters для глобальных функций
+  const settersRef = useRef({});
   settersRef.current = {
     setIsRecording,
     setIsProcessing,
@@ -45,276 +279,39 @@ function App() {
   };
 
   useEffect(() => {
-    // Проверяем ГЛОБАЛЬНУЮ переменную - она не сбрасывается при remount
-    if (globalHasAutoStarted) {
+    // Проверяем ГЛОБАЛЬНЫЙ флаг
+    if (g_hasAutoStarted) {
       console.log('Autostart already triggered globally, skipping');
       return;
     }
     
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('autostart') === 'true') {
-      globalHasAutoStarted = true; // Устанавливаем ГЛОБАЛЬНО
+      g_hasAutoStarted = true;
       
       const delay = /Android/i.test(navigator.userAgent) ? 2000 : 500;
       console.log(`Autostart scheduled in ${delay}ms (global flag set)`);
       
-      globalAutoStartTimeout = setTimeout(() => {
+      g_autoStartTimeout = setTimeout(() => {
         console.log('Autostart executing...');
-        startRecordingGlobal(settersRef);
+        startRecordingGlobal(settersRef.current);
       }, delay);
     }
     
-    // Cleanup function
     return () => {
-      // Очищаем таймаут автозапуска при unmount
-      if (globalAutoStartTimeout) {
-        clearTimeout(globalAutoStartTimeout);
-        globalAutoStartTimeout = null;
+      if (g_autoStartTimeout) {
+        clearTimeout(g_autoStartTimeout);
+        g_autoStartTimeout = null;
       }
     };
-  }, []); // Пустой массив зависимостей
+  }, []);
 
-  const startRecording = async () => {
-    // Защита от двойного вызова с использованием ref (синхронная проверка)
-    if (isRecordingRef.current) {
-      console.log('Recording already in progress, ignoring duplicate call');
-      return;
-    }
-    isRecordingRef.current = true;
-    
-    try {
-      setError(null);
-      setResult(null);
-      
-      console.log('Starting recording...');
-      
-      // Вибрация при начале записи (протяжная - 500мс)
-      if ('vibrate' in navigator) {
-        try {
-          navigator.vibrate(500);
-          console.log('✓ Vibration: Recording started');
-        } catch (e) {
-          console.log('Vibration blocked:', e.message);
-        }
-      }
-      
-      // Запрашиваем разрешения с более простыми constraints для Android
-      const constraints = /Android/i.test(navigator.userAgent) ? {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        }
-      } : {
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          sampleRate: 44100
-        }
-      };
-      
-      console.log('Requesting media with constraints:', constraints);
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('✓ Media stream obtained');
-      
-      // Определяем лучший доступный mime type
-      let mimeType = 'audio/webm';
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        mimeType = 'audio/webm;codecs=opus';
-      } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-        mimeType = 'audio/ogg;codecs=opus';
-      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        mimeType = 'audio/mp4';
-      }
-      
-      console.log('Using mime type:', mimeType);
-      
-      // Увеличиваем битрейт для Android для лучшего распознавания
-      const audioBitsPerSecond = /Android/i.test(navigator.userAgent) ? 192000 : 128000;
-      console.log('Audio bitrate:', audioBitsPerSecond);
-      
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: mimeType,
-        audioBitsPerSecond: audioBitsPerSecond
-      });
-      
-      audioChunksRef.current = [];
-      let chunksReceived = 0;
-      
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksReceived++;
-          console.log(`Chunk ${chunksReceived}:`, event.data.size, 'bytes');
-          audioChunksRef.current.push(event.data);
-        }
-      };
-      
-      mediaRecorder.onstop = async () => {
-        console.log(`Recording stopped. Total chunks: ${chunksReceived}`);
-        
-        // Сбрасываем флаг записи
-        isRecordingRef.current = false;
-        
-        // Проверяем, что есть данные
-        if (audioChunksRef.current.length === 0) {
-          setError('Запись не содержит данных. Попробуйте еще раз.');
-          setIsProcessing(false);
-          stream.getTracks().forEach(track => track.stop());
-          return;
-        }
-        
-        // Вибрация по окончании записи перед распознаванием (протяжная - 500мс)
-        if ('vibrate' in navigator) {
-          try {
-            navigator.vibrate(500);
-            console.log('✓ Vibration: Recording stopped, starting recognition');
-          } catch (e) {
-            console.log('Vibration blocked:', e.message);
-          }
-        }
-        
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        console.log('Total audio size:', audioBlob.size, 'bytes from', audioChunksRef.current.length, 'chunks');
-        
-        // Дополнительная проверка размера
-        if (audioBlob.size < 10000) {
-          setError('Записанный файл слишком мал. Убедитесь, что микрофон работает и попробуйте снова.');
-          setIsProcessing(false);
-          stream.getTracks().forEach(track => track.stop());
-          return;
-        }
-        
-        await recognizeAudio(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
-      };
-      
-      mediaRecorder.onerror = (event) => {
-        console.error('MediaRecorder error:', event.error);
-        setError('Ошибка записи: ' + event.error);
-        setIsRecording(false);
-        setIsProcessing(false);
-        isRecordingRef.current = false;
-        stream.getTracks().forEach(track => track.stop());
-      };
-      
-      // Очищаем предыдущий таймер если есть
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      
-      // Запрашиваем данные каждую секунду для более стабильной записи
-      console.log('Starting MediaRecorder...');
-      mediaRecorder.start(1000);
-      mediaRecorderRef.current = mediaRecorder;
-      setIsRecording(true);
-      setRecordingTime(0);
-      
-      console.log('MediaRecorder state:', mediaRecorder.state);
-      
-      // Используем setTimeout вместо setInterval для предотвращения накопления вызовов
-      const startTime = Date.now();
-      const maxDuration = MAX_RECORDING_TIME * 1000;
-      
-      const updateTimer = () => {
-        // Проверяем, что запись всё ещё активна
-        if (!isRecordingRef.current && mediaRecorderRef.current?.state !== 'recording') {
-          console.log('Timer stopped - recording not active');
-          return;
-        }
-        
-        const elapsed = Date.now() - startTime;
-        const elapsedSeconds = Math.floor(elapsed / 1000);
-        setRecordingTime(elapsedSeconds);
-        
-        // Автоматическая остановка через MAX_RECORDING_TIME секунд
-        if (elapsed >= maxDuration) {
-          console.log('Max recording time reached, stopping...');
-          stopRecording();
-          return;
-        }
-        
-        // Планируем следующее обновление
-        timerRef.current = setTimeout(updateTimer, 100);
-      };
-      
-      // Запускаем таймер
-      timerRef.current = setTimeout(updateTimer, 100);
-      
-    } catch (err) {
-      console.error('Error starting recording:', err);
-      setError('Не удалось получить доступ к микрофону. Разрешите доступ в настройках браузера.');
-      setIsRecording(false);
-      setIsProcessing(false);
-      isRecordingRef.current = false;
-    }
+  const handleStartRecording = () => {
+    startRecordingGlobal(settersRef.current);
   };
 
-  const stopRecording = () => {
-    console.log('stopRecording called, state:', mediaRecorderRef.current?.state);
-    
-    // Останавливаем таймер СРАЗУ
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-      console.log('Timer cleared');
-    }
-    
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      console.log('Stopping MediaRecorder...');
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      setIsProcessing(true);
-    } else {
-      console.log('MediaRecorder not in recording state:', mediaRecorderRef.current?.state);
-      // Сбрасываем флаг записи если MediaRecorder уже остановлен
-      isRecordingRef.current = false;
-    }
-  };
-
-  const recognizeAudio = async (audioBlob) => {
-    try {
-      console.log('Recognizing audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type);
-      
-      // Проверяем минимальный размер
-      if (audioBlob.size < 10000) {
-        console.error('File too small:', audioBlob.size, 'bytes');
-        setError('Записанный файл слишком мал (' + audioBlob.size + ' байт). Проверьте разрешения микрофона.');
-        setIsProcessing(false);
-        return;
-      }
-      
-      const formData = new FormData();
-      // Отправляем как есть, без конвертации
-      formData.append('file', audioBlob, 'recording.webm');
-      
-      console.log('Sending to server...');
-      const response = await axios.post(`${API}/recognize`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        timeout: 30000 // 30 секунд таймаут
-      });
-      
-      console.log('Recognition response:', response.data);
-      
-      setResult(response.data);
-      
-      // Запускаем вибрацию
-      if (response.data.vibration_pattern && 'vibrate' in navigator) {
-        console.log('Starting vibration pattern:', response.data.vibration_pattern.length, 'elements');
-        navigator.vibrate(response.data.vibration_pattern);
-      }
-      
-    } catch (err) {
-      console.error('Recognition error:', err);
-      console.error('Error details:', err.response?.data);
-      const errorMsg = err.response?.data?.detail || err.message || 'Не удалось распознать музыку';
-      setError(errorMsg);
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleStopRecording = () => {
+    stopRecordingGlobal(settersRef.current);
   };
 
   const formatTime = (seconds) => {
@@ -337,12 +334,11 @@ function App() {
         </CardHeader>
         
         <CardContent className="space-y-4 pt-0 -mt-8">
-          {/* Кнопка записи / Прогресс бар - фиксированная высота */}
           <div className="flex flex-col items-center space-y-3" style={{ minHeight: '240px' }}>
             {!isRecording && !isProcessing && (
               <button
                 data-testid="start-recording-btn"
-                onClick={startRecording}
+                onClick={handleStartRecording}
                 className="w-48 h-48 rounded-full transition-transform hover:scale-105 bg-transparent border-0 p-0"
               >
                 <img 
@@ -358,7 +354,7 @@ function App() {
                 <div className="relative">
                   <button
                     data-testid="stop-recording-btn"
-                    onClick={stopRecording}
+                    onClick={handleStopRecording}
                     className="w-48 h-48 rounded-full bg-transparent border-0 p-0 animate-pulse"
                   >
                     <img 
@@ -391,7 +387,6 @@ function App() {
             )}
           </div>
 
-          {/* Группировка букв на главном экране */}
           {!result && (
             <div className="pt-4 mt-4 border-t border-gray-800">
               <div className="text-sm space-y-1 text-center">
@@ -401,14 +396,12 @@ function App() {
             </div>
           )}
 
-          {/* Ошибка */}
           {error && (
             <Alert variant="destructive" data-testid="error-alert">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          {/* Результат */}
           {result && (
             <Card className="border-2 border-green-600 bg-black" data-testid="result-card">
               <CardHeader>
