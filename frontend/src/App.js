@@ -45,40 +45,65 @@ function App() {
       setError(null);
       setResult(null);
       
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          sampleRate: 44100
+        }
+      });
+      
+      // Определяем лучший доступный mime type
+      let mimeType = 'audio/webm';
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+        mimeType = 'audio/ogg;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
+      }
+      
+      console.log('Using mime type:', mimeType);
+      
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'
+        mimeType: mimeType,
+        audioBitsPerSecond: 128000
       });
       
       audioChunksRef.current = [];
       
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
+          console.log('Chunk received:', event.data.size, 'bytes');
           audioChunksRef.current.push(event.data);
         }
       };
       
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        console.log('Total audio size:', audioBlob.size, 'bytes');
         await recognizeAudio(audioBlob);
         stream.getTracks().forEach(track => track.stop());
       };
       
-      mediaRecorder.start();
+      // Запрашиваем данные каждую секунду для более стабильной записи
+      mediaRecorder.start(1000);
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
       setRecordingTime(0);
       
+      // Используем более точный таймер
+      let startTime = Date.now();
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => {
-          const newTime = prev + 1;
-          // Автоматическая остановка через 10 секунд
-          if (newTime >= MAX_RECORDING_TIME) {
-            stopRecording();
-          }
-          return newTime;
-        });
-      }, 1000);
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        setRecordingTime(elapsed);
+        
+        // Автоматическая остановка через MAX_RECORDING_TIME секунд
+        if (elapsed >= MAX_RECORDING_TIME) {
+          stopRecording();
+        }
+      }, 100); // Обновляем каждые 100мс для плавности
       
     } catch (err) {
       setError('Не удалось получить доступ к микрофону. Разрешите доступ в настройках браузера.');
