@@ -250,13 +250,29 @@ function App() {
             <Card className="bg-muted/50">
               <CardContent className="pt-6">
                 <h3 className="font-semibold mb-2 text-sm">Как использовать:</h3>
-                <ol className="text-sm space-y-1 text-muted-foreground list-decimal list-inside">
+                <ol className="text-sm space-y-1 text-muted-foreground list-decimal list-inside mb-4">
                   <li>Разрешите доступ к микрофону</li>
                   <li>Нажмите на иконку микрофона</li>
-                  <li>Запишите 5-10 секунд музыки</li>
-                  <li>Остановите запись</li>
+                  <li>Запись автоматически остановится через 10 сек</li>
                   <li>Получите название + вибросигналы</li>
                 </ol>
+                
+                <div className="border-t pt-3 mt-3">
+                  <h4 className="font-semibold text-xs mb-2">Группировка букв:</h4>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <div><strong>RU:</strong> А-Д | Е-Й | Й-Н | О-Т | У-Ч | Ш-Ь | Э-Я</div>
+                    <div><strong>EN:</strong> A-E | F-J | K-O | P-T | U-Y | Z</div>
+                  </div>
+                </div>
+                
+                <div className="border-t pt-3 mt-3">
+                  <h4 className="font-semibold text-xs mb-2">Автозапуск (MacroDroid):</h4>
+                  <div className="text-xs text-muted-foreground break-all">
+                    <code className="bg-muted px-2 py-1 rounded">
+                      {window.location.origin}/?autostart=true
+                    </code>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
