@@ -141,7 +141,6 @@ def create_vibration_pattern(title: str, language: str) -> List[int]:
 async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
     """Распознать музыку через AcoustID API (бесплатный open-source)"""
     try:
-        import acoustid
         import tempfile
         import os
         
@@ -151,22 +150,64 @@ async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
             tmp_path = tmp.name
         
         try:
-            # Используем AcoustID для распознавания
-            # Бесплатный API key для тестирования
-            results = list(acoustid.match(
-                'HycL4TYl4Y',  # Публичный демо ключ
-                tmp_path,
-                parse=True
-            ))
+            # Используем acoustid напрямую с их API
+            import acoustid
             
-            if not results:
+            # Получаем аудиофингерпринт и длительность
+            try:
+                duration, fingerprint = acoustid.fingerprint_file(tmp_path)
+            except Exception as fp_error:
+                logging.error(f"Ошибка создания фингерпринта: {str(fp_error)}")
+                return {
+                    'status': 'error',
+                    'message': f'Не удалось создать аудиофингерпринт: {str(fp_error)}'
+                }
+            
+            # Отправляем запрос к AcoustID API
+            data = {
+                'client': 'HycL4TYl4Y',  # Публичный демо ключ
+                'duration': int(duration),
+                'fingerprint': fingerprint,
+                'meta': 'recordings'
+            }
+            
+            response = requests.post(
+                'https://api.acoustid.org/v2/lookup',
+                data=data,
+                timeout=30
+            )
+            
+            result = response.json()
+            
+            if result.get('status') != 'ok':
                 return {
                     'status': 'not_found',
                     'message': 'Песня не распознана'
                 }
             
+            results = result.get('results', [])
+            if not results:
+                return {
+                    'status': 'not_found',
+                    'message': 'Песня не найдена в базе'
+                }
+            
             # Берем лучший результат
-            score, recording_id, title, artist = results[0]
+            best_result = results[0]
+            recordings = best_result.get('recordings', [])
+            
+            if not recordings:
+                return {
+                    'status': 'not_found',
+                    'message': 'Метаданные не найдены'
+                }
+            
+            recording = recordings[0]
+            title = recording.get('title', 'Unknown')
+            
+            # Извлекаем артиста
+            artists = recording.get('artists', [])
+            artist = artists[0].get('name', 'Unknown') if artists else 'Unknown'
             
             # Определяем язык
             language = detect_language(title)
@@ -176,13 +217,12 @@ async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
             
             return {
                 'status': 'success',
-                'title': title or 'Unknown',
-                'artist': artist or 'Unknown',
+                'title': title,
+                'artist': artist,
                 'album': None,
                 'language': language,
                 'vibration_pattern': vibration_pattern,
-                'score': score,
-                'recording_id': recording_id
+                'score': best_result.get('score', 0)
             }
             
         finally:
