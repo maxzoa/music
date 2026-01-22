@@ -147,18 +147,17 @@ function App() {
           {/* Кнопка записи */}
           <div className="flex flex-col items-center space-y-3">
             {!isRecording && !isProcessing && (
-              <Button
+              <button
                 data-testid="start-recording-btn"
                 onClick={startRecording}
-                size="lg"
-                className="w-24 h-24 rounded-full text-white shadow-lg transition-transform hover:scale-105 bg-red-600 hover:bg-red-700"
-                style={{ 
-                  boxShadow: '0 0 30px rgba(255, 0, 0, 0.6), 0 0 60px rgba(255, 0, 0, 0.4), inset 0 0 20px rgba(0, 0, 0, 0.5)',
-                  border: '2px solid rgba(255, 0, 0, 0.8)'
-                }}
+                className="w-24 h-24 rounded-full transition-transform hover:scale-105 bg-transparent border-0 p-0"
               >
-                <Mic className="w-10 h-10" />
-              </Button>
+                <img 
+                  src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/81fs3fzq_photo_2026-01-22_14-02-04.jpg"
+                  alt="Record"
+                  className="w-full h-full rounded-full"
+                />
+              </button>
             )}
             
             {isRecording && (
