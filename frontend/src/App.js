@@ -183,7 +183,7 @@ function App() {
       
       // Очищаем предыдущий таймер если есть
       if (timerRef.current) {
-        clearInterval(timerRef.current);
+        clearTimeout(timerRef.current);
         timerRef.current = null;
       }
       
