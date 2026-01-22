@@ -88,9 +88,13 @@ function App() {
       
       console.log('Using mime type:', mimeType);
       
+      // Увеличиваем битрейт для Android для лучшего распознавания
+      const audioBitsPerSecond = /Android/i.test(navigator.userAgent) ? 192000 : 128000;
+      console.log('Audio bitrate:', audioBitsPerSecond);
+      
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: mimeType,
-        audioBitsPerSecond: 128000
+        audioBitsPerSecond: audioBitsPerSecond
       });
       
       audioChunksRef.current = [];
