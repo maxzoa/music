@@ -183,8 +183,8 @@ function App() {
         </CardHeader>
         
         <CardContent className="space-y-4 pt-0 -mt-8">
-          {/* Кнопка записи */}
-          <div className="flex flex-col items-center space-y-3">
+          {/* Кнопка записи / Прогресс бар - фиксированная высота */}
+          <div className="flex flex-col items-center space-y-3" style={{ minHeight: '240px' }}>
             {!isRecording && !isProcessing && (
               <button
                 data-testid="start-recording-btn"
@@ -224,8 +224,15 @@ function App() {
             
             {isProcessing && (
               <div className="flex flex-col items-center space-y-3" data-testid="processing-indicator">
-                <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-sm text-white">Распознавание...</p>
+                <div className="w-48 h-48 relative">
+                  <img 
+                    src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/nqgnoylt_photo_2026-01-22_14-02-04-removebg-preview%20%281%29.png"
+                    alt="Processing"
+                    className="w-full h-full animate-spin"
+                    style={{ animationDuration: '2s' }}
+                  />
+                </div>
+                <p className="text-lg font-bold text-green-500">Распознавание...</p>
               </div>
             )}
           </div>
