@@ -194,9 +194,9 @@ function App() {
           {/* Группировка букв на главном экране */}
           {!result && (
             <div className="pt-4 mt-4 border-t border-gray-800">
-              <div className="text-xs space-y-1 text-center">
-                <div className="text-gray-500 font-bold">RU: А-Д | Е-Й | Й-Н | О-Т | У-Ч | Ш-Ь | Э-Я</div>
-                <div className="text-gray-500 font-bold">EN: A-E | F-J | K-O | P-T | U-Y | Z</div>
+              <div className="text-sm space-y-1 text-center">
+                <div className="text-gray-500 font-extrabold">RU: А-Д | Е-Й | Й-Н | О-Т | У-Ч | Ш-Ь | Э-Я</div>
+                <div className="text-gray-500 font-extrabold">EN: A-E | F-J | K-O | P-T | U-Y | Z</div>
               </div>
             </div>
           )}
