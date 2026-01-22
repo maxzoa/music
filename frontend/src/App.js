@@ -16,34 +16,46 @@ function App() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [autoStarted, setAutoStarted] = useState(false);
-  const [isStarting, setIsStarting] = useState(false); // Флаг для предотвращения двойного старта
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
   const hasAutoStartedRef = useRef(false); // Ref для предотвращения двойного автозапуска
+  const isRecordingRef = useRef(false); // Ref для синхронной проверки состояния записи
+  const autoStartTimeoutRef = useRef(null); // Ref для таймаута автозапуска
 
   useEffect(() => {
-    // Проверяем URL параметры для автозапуска ОДИН РАЗ
+    // Используем ref для гарантии однократного выполнения (React Strict Mode вызывает useEffect дважды)
+    if (hasAutoStartedRef.current) {
+      console.log('Autostart already triggered, skipping duplicate');
+      return;
+    }
+    
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('autostart') === 'true' && !autoStarted) {
-      setAutoStarted(true);
-      // Увеличиваем задержку для Android - нужно время на получение разрешений
+    if (urlParams.get('autostart') === 'true') {
+      hasAutoStartedRef.current = true; // Устанавливаем СРАЗУ до любых асинхронных операций
+      
       const delay = /Android/i.test(navigator.userAgent) ? 2000 : 500;
-      console.log(`Autostart in ${delay}ms`);
-      setTimeout(() => {
+      console.log(`Autostart scheduled in ${delay}ms`);
+      
+      autoStartTimeoutRef.current = setTimeout(() => {
+        console.log('Autostart executing...');
         startRecording();
       }, delay);
     }
     
+    // Cleanup function
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      if (autoStartTimeoutRef.current) {
+        clearTimeout(autoStartTimeoutRef.current);
+        autoStartTimeoutRef.current = null;
+      }
     };
-  }, []); // Пустой массив зависимостей - выполнится только один раз
+  }, []); // Пустой массив зависимостей
 
   const startRecording = async () => {
     try {
