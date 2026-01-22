@@ -125,25 +125,39 @@ function App() {
 
   const recognizeAudio = async (audioBlob) => {
     try {
+      console.log('Recognizing audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type);
+      
+      // Проверяем минимальный размер
+      if (audioBlob.size < 1000) {
+        setError('Записанный файл слишком мал. Попробуйте еще раз.');
+        setIsProcessing(false);
+        return;
+      }
+      
       const formData = new FormData();
       formData.append('file', audioBlob, 'recording.webm');
       
       const response = await axios.post(`${API}/recognize`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
-        }
+        },
+        timeout: 30000 // 30 секунд таймаут
       });
+      
+      console.log('Recognition response:', response.data);
       
       setResult(response.data);
       
       // Запускаем вибрацию
       if (response.data.vibration_pattern && 'vibrate' in navigator) {
+        console.log('Starting vibration pattern:', response.data.vibration_pattern.length, 'elements');
         navigator.vibrate(response.data.vibration_pattern);
       }
       
     } catch (err) {
-      setError(err.response?.data?.detail || 'Не удалось распознать музыку. Попробуйте записать еще раз.');
-      console.error('Ошибка распознавания:', err);
+      console.error('Recognition error:', err);
+      const errorMsg = err.response?.data?.detail || err.message || 'Не удалось распознать музыку. Попробуйте записать еще раз.';
+      setError(errorMsg);
     } finally {
       setIsProcessing(false);
     }
