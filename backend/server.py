@@ -253,27 +253,26 @@ async def get_status_checks():
 @api_router.post("/recognize", response_model=RecognitionResponse)
 async def recognize_audio(file: UploadFile = File(...)):
     """Распознать музыку из загруженного файла"""
+    logging.info(f"Received file: {file.filename}, type: {file.content_type}, size: {file.size if file.size else 'unknown'}")
+    
     if file.size and file.size > 10 * 1024 * 1024:
         raise HTTPException(
             status_code=413,
             detail="Размер файла должен быть менее 10MB"
         )
     
-    valid_types = ['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/ogg', 'audio/webm']
-    if file.content_type not in valid_types:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Неподдерживаемый формат. Поддерживаются: {', '.join(valid_types)}"
-        )
-    
     try:
         file_content = await file.read()
-        if not file_content:
-            raise HTTPException(status_code=400, detail="Файл пуст")
+        actual_size = len(file_content)
+        logging.info(f"Actual file content size: {actual_size} bytes")
+        
+        if not file_content or actual_size < 1000:
+            raise HTTPException(status_code=400, detail="Файл слишком мал или пуст")
         
         result = await recognize_audio_with_audd(file_content, file.filename or "audio")
         
         if result['status'] in ['error', 'not_found']:
+            logging.warning(f"Recognition failed: {result.get('message')}")
             raise HTTPException(status_code=404, detail=result.get('message', 'Ошибка распознавания'))
         
         # Сохраняем в историю
@@ -282,15 +281,20 @@ async def recognize_audio(file: UploadFile = File(...)):
             'artist': result['artist'],
             'album': result.get('album'),
             'language': result['language'],
+            'score': result.get('score', 0),
+            'file_size': actual_size,
             'timestamp': datetime.now(timezone.utc).isoformat()
         })
         
+        logging.info(f"Successfully recognized: {result['artist']} - {result['title']}")
         return result
         
     except HTTPException:
         raise
     except Exception as e:
-        logging.error(f"Ошибка: {str(e)}")
+        logging.error(f"Error processing file: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Ошибка обработки файла")
 
 app.include_router(api_router)
