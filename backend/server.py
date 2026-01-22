@@ -77,45 +77,63 @@ def get_letter_position(letter: str, alphabet_groups: List[List[str]]) -> tuple:
     return None
 
 def create_vibration_pattern(title: str, language: str) -> List[int]:
-    """Создать паттерн вибрации для названия песни"""
+    """Создать паттерн вибрации для названия песни
+    
+    Алгоритм:
+    1. Индикатор языка: 1 вибро = английский, 2 вибро = русский
+    2. Для каждой буквы:
+       - Номер группы (количество сигналов)
+       - Короткая пауза
+       - Номер буквы в группе (количество сигналов)
+       - Длинная пауза перед следующей буквой
+    
+    Пример: ЗАТ (русский)
+    - 2 вибро (русский)
+    - Пауза 1500мс
+    - З: 2 вибро (группа 2: Е-Й) + пауза 400мс + 3 вибро (3-я буква)
+    - Пауза 1000мс
+    - А: 1 вибро (группа 1: А-Д) + пауза 400мс + 1 вибро (1-я буква)
+    - Пауза 1000мс
+    - Т: 4 вибро (группа 4: О-Т) + пауза 400мс + 5 вибро (5-я буква)
+    """
     pattern = []
     
-    # Индикатор языка: 1 вибро = английский, 2 вибро = русский
+    # 1. БЛОК ЯЗЫКА: 1 вибро = английский, 2 вибро = русский
     if language == 'english':
-        pattern.extend([200, 1000])  # 1 вибро, затем пауза
+        pattern.extend([300, 1500])  # 1 вибро, затем длинная пауза
     else:
-        pattern.extend([200, 300, 200, 1000])  # 2 вибро, затем пауза
+        pattern.extend([300, 250, 300, 1500])  # 2 вибро, затем длинная пауза
     
     # Определяем алфавит
     alphabet_groups = RUSSIAN_ALPHABET_GROUPS if language == 'russian' else ENGLISH_ALPHABET_GROUPS
     
-    # Кодируем каждую букву
+    # 2. КОДИРУЕМ КАЖДУЮ БУКВУ
     for char in title:
         if not char.isalpha():
-            # Пробелы и знаки - длинная пауза
-            pattern.extend([0, 1500])
+            # Пробелы и знаки - очень длинная пауза
+            pattern.extend([0, 2000])
             continue
         
         position = get_letter_position(char, alphabet_groups)
         if position:
             group_num, letter_num = position
             
-            # Вибро для номера группы
+            # 2.1 БЛОК ГРУППЫ: показываем номер группы
             for i in range(group_num):
-                pattern.append(200)
+                pattern.append(250)  # вибро
                 if i < group_num - 1:
-                    pattern.append(200)  # короткая пауза между вибро в группе
+                    pattern.append(150)  # короткая пауза между вибро в одном блоке
             
-            # Пауза между группой и буквой
-            pattern.append(500)
+            # Пауза между блоком группы и блоком буквы
+            pattern.append(400)
             
-            # Вибро для номера буквы в группе
+            # 2.2 БЛОК БУКВЫ: показываем номер буквы в группе
             for i in range(letter_num):
-                pattern.append(200)
+                pattern.append(250)  # вибро
                 if i < letter_num - 1:
-                    pattern.append(200)
+                    pattern.append(150)  # короткая пауза между вибро в одном блоке
             
-            # Пауза между буквами
+            # Длинная пауза между буквами
             pattern.append(1000)
     
     return pattern
