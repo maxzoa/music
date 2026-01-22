@@ -47,20 +47,33 @@ function App() {
       setError(null);
       setResult(null);
       
+      console.log('Starting recording...');
+      
       // Вибрация при начале записи (протяжная - 500мс)
       if ('vibrate' in navigator) {
         navigator.vibrate(500);
         console.log('✓ Vibration: Recording started');
       }
       
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      // Запрашиваем разрешения с более простыми constraints для Android
+      const constraints = /Android/i.test(navigator.userAgent) ? {
+        audio: {
+          echoCancellation: true,  // Включаем для Android
+          noiseSuppression: true,   // Включаем для Android
+          autoGainControl: true,    // Включаем для Android
+        }
+      } : {
         audio: {
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false,
           sampleRate: 44100
         }
-      });
+      };
+      
+      console.log('Requesting media with constraints:', constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('✓ Media stream obtained');
       
       // Определяем лучший доступный mime type
       let mimeType = 'audio/webm';
@@ -80,15 +93,27 @@ function App() {
       });
       
       audioChunksRef.current = [];
+      let chunksReceived = 0;
       
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log('Chunk received:', event.data.size, 'bytes');
+          chunksReceived++;
+          console.log(`Chunk ${chunksReceived}:`, event.data.size, 'bytes');
           audioChunksRef.current.push(event.data);
         }
       };
       
       mediaRecorder.onstop = async () => {
+        console.log(`Recording stopped. Total chunks: ${chunksReceived}`);
+        
+        // Проверяем, что есть данные
+        if (audioChunksRef.current.length === 0) {
+          setError('Запись не содержит данных. Попробуйте еще раз.');
+          setIsProcessing(false);
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        
         // Вибрация по окончании записи перед распознаванием (протяжная - 500мс)
         if ('vibrate' in navigator) {
           navigator.vibrate(500);
@@ -96,16 +121,36 @@ function App() {
         }
         
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        console.log('Total audio size:', audioBlob.size, 'bytes');
+        console.log('Total audio size:', audioBlob.size, 'bytes from', audioChunksRef.current.length, 'chunks');
+        
+        // Дополнительная проверка размера
+        if (audioBlob.size < 10000) {
+          setError('Записанный файл слишком мал. Убедитесь, что микрофон работает и попробуйте снова.');
+          setIsProcessing(false);
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        
         await recognizeAudio(audioBlob);
         stream.getTracks().forEach(track => track.stop());
       };
       
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event.error);
+        setError('Ошибка записи: ' + event.error);
+        setIsRecording(false);
+        setIsProcessing(false);
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
       // Запрашиваем данные каждую секунду для более стабильной записи
+      console.log('Starting MediaRecorder...');
       mediaRecorder.start(1000);
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
       setRecordingTime(0);
+      
+      console.log('MediaRecorder state:', mediaRecorder.state);
       
       // Используем более точный таймер
       let startTime = Date.now();
@@ -115,13 +160,16 @@ function App() {
         
         // Автоматическая остановка через MAX_RECORDING_TIME секунд
         if (elapsed >= MAX_RECORDING_TIME) {
+          console.log('Max recording time reached, stopping...');
           stopRecording();
         }
       }, 100); // Обновляем каждые 100мс для плавности
       
     } catch (err) {
+      console.error('Error starting recording:', err);
       setError('Не удалось получить доступ к микрофону. Разрешите доступ в настройках браузера.');
-      console.error('Ошибка доступа к микрофону:', err);
+      setIsRecording(false);
+      setIsProcessing(false);
     }
   };
 
