@@ -255,7 +255,7 @@ function App() {
                 <ol className="text-sm space-y-1 text-muted-foreground list-decimal list-inside mb-4">
                   <li>Разрешите доступ к микрофону</li>
                   <li>Нажмите на иконку микрофона</li>
-                  <li>Запись автоматически остановится через 10 сек</li>
+                  <li>Запись автоматически остановится через 15 сек</li>
                   <li>Получите название + вибросигналы</li>
                 </ol>
                 
