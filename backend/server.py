@@ -191,6 +191,10 @@ async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
 async def root():
     return {"message": "Melody Guesser API"}
 
+@api_router.options("/")
+async def root_options():
+    return {}
+
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
     status_dict = input.model_dump()
