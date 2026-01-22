@@ -23,12 +23,22 @@ function App() {
   const timerRef = useRef(null);
 
   useEffect(() => {
+    // Проверяем URL параметры для автозапуска
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('autostart') === 'true' && !autoStarted) {
+      setAutoStarted(true);
+      // Небольшая задержка для загрузки страницы
+      setTimeout(() => {
+        startRecording();
+      }, 500);
+    }
+    
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, []);
+  }, [autoStarted]);
 
   const startRecording = async () => {
     try {
