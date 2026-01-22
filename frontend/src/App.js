@@ -23,7 +23,7 @@ function App() {
   const timerRef = useRef(null);
 
   useEffect(() => {
-    // Проверяем URL параметры для автозапуска
+    // Проверяем URL параметры для автозапуска ОДИН РАЗ
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('autostart') === 'true' && !autoStarted) {
       setAutoStarted(true);
@@ -38,9 +38,10 @@ function App() {
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
-  }, [autoStarted]);
+  }, []); // Пустой массив зависимостей - выполнится только один раз
 
   const startRecording = async () => {
     try {
