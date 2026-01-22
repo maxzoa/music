@@ -17,10 +17,12 @@ function App() {
   const [error, setError] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [autoStarted, setAutoStarted] = useState(false);
+  const [isStarting, setIsStarting] = useState(false); // Флаг для предотвращения двойного старта
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
+  const hasAutoStartedRef = useRef(false); // Ref для предотвращения двойного автозапуска
 
   useEffect(() => {
     // Проверяем URL параметры для автозапуска ОДИН РАЗ
