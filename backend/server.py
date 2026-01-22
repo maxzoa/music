@@ -140,34 +140,64 @@ async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
     На данный момент возвращает демо-результат для тестирования интерфейса
     """
     try:
-        import tempfile
-        import os
         import hashlib
+        import random
         
-        # Создаем хеш файла для "псевдораспознавания"
-        file_hash = hashlib.md5(file_content).hexdigest()
+        # Создаем хеш файла + timestamp для уникальности каждого запроса
+        import time
+        unique_data = file_content + str(time.time()).encode()
+        file_hash = hashlib.md5(unique_data).hexdigest()
         
-        # Демо-база песен для тестирования
-        demo_songs = {
-            '0': {'title': 'Заточка', 'artist': 'Инструментал', 'language': 'russian'},
-            '1': {'title': 'Shape of You', 'artist': 'Ed Sheeran', 'language': 'english'},
-            '2': {'title': 'Калинка', 'artist': 'Народная', 'language': 'russian'},
-            '3': {'title': 'Bohemian Rhapsody', 'artist': 'Queen', 'language': 'english'},
-            '4': {'title': 'Катюша', 'artist': 'Матвей Блантер', 'language': 'russian'},
-        }
+        # Демо-база исполнителей для тестирования (только первые 3 буквы будут использоваться)
+        demo_artists_ru = [
+            'Алла Пугачева',
+            'Виктор Цой',
+            'Земфира',
+            'Баста',
+            'Дима Билан',
+            'Егор Крид',
+            'Любэ',
+            'Машина Времени',
+            'Наутилус Помпилиус',
+            'Сплин'
+        ]
         
-        # Выбираем песню на основе хеша
-        song_index = str(int(file_hash[0], 16) % len(demo_songs))
-        song = demo_songs.get(song_index, demo_songs['0'])
+        demo_artists_en = [
+            'Queen',
+            'Beatles',
+            'Madonna',
+            'Adele',
+            'Coldplay',
+            'Rihanna',
+            'Drake',
+            'Eminem',
+            'Nirvana',
+            'Metallica'
+        ]
         
-        title = song['title']
-        artist = song['artist']
-        language = song['language']
+        # Случайно выбираем язык на основе хеша
+        is_russian = int(file_hash[0], 16) % 2 == 0
         
-        # Создаем паттерн вибрации
-        vibration_pattern = create_vibration_pattern(title, language)
+        if is_russian:
+            # Выбираем случайного русского исполнителя
+            artist_index = int(file_hash[:4], 16) % len(demo_artists_ru)
+            artist = demo_artists_ru[artist_index]
+            language = 'russian'
+            title = 'Неизвестная песня'
+        else:
+            # Выбираем случайного английского исполнителя
+            artist_index = int(file_hash[:4], 16) % len(demo_artists_en)
+            artist = demo_artists_en[artist_index]
+            language = 'english'
+            title = 'Unknown Song'
         
-        logging.info(f"Демо-распознавание: {title} - {artist} ({language})")
+        # Определяем язык исполнителя
+        language = detect_language(artist)
+        
+        # Создаем паттерн вибрации для ПЕРВЫХ 3 БУКВ ИСПОЛНИТЕЛЯ
+        vibration_pattern = create_vibration_pattern(artist, language)
+        
+        logging.info(f"Демо-распознавание: {artist[:3]}... ({language}) - 3 буквы")
         
         return {
             'status': 'success',
