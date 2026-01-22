@@ -131,19 +131,20 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#000000' }}>
+    <div className="min-h-screen flex flex-col items-center justify-start p-4" style={{ background: '#000000' }}>
       <Card className="w-full max-w-md bg-black border-gray-800" data-testid="main-card">
-        <CardHeader className="text-center pb-4">
-          <div className="flex justify-center mb-6">
+        <CardHeader className="text-center pb-2">
+          <div className="flex justify-center mb-4">
             <img 
               src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/g024atoz_photo_2026-01-22_13-49-18.jpg" 
               alt="MAXZOA" 
-              className="w-48 h-auto"
+              className="w-full h-auto"
+              style={{ filter: 'drop-shadow(0 0 20px rgba(255, 0, 0, 0.5))' }}
             />
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           {/* Кнопка записи */}
           <div className="flex flex-col items-center space-y-4">
             {!isRecording && !isProcessing && (
