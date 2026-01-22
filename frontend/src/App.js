@@ -150,7 +150,7 @@ function App() {
               <button
                 data-testid="start-recording-btn"
                 onClick={startRecording}
-                className="w-24 h-24 rounded-full transition-transform hover:scale-105 bg-transparent border-0 p-0"
+                className="w-48 h-48 rounded-full transition-transform hover:scale-105 bg-transparent border-0 p-0"
               >
                 <img 
                   src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/81fs3fzq_photo_2026-01-22_14-02-04.jpg"
