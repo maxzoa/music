@@ -47,7 +47,7 @@ function App() {
     // Cleanup function
     return () => {
       if (timerRef.current) {
-        clearInterval(timerRef.current);
+        clearTimeout(timerRef.current);
         timerRef.current = null;
       }
       if (autoStartTimeoutRef.current) {
