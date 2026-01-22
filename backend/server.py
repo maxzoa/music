@@ -134,86 +134,95 @@ def create_vibration_pattern(title: str, language: str) -> List[int]:
     return pattern
 
 async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
-    """Распознать музыку через AcoustID API (бесплатный open-source)
-    
-    ПРИМЕЧАНИЕ: Для полноценной работы требуется установка fpcalc
-    На данный момент возвращает демо-результат для тестирования интерфейса
-    """
+    """Распознать музыку через ACRCloud API (реальное распознавание)"""
     try:
-        import hashlib
-        import random
+        import tempfile
+        import os
+        from acrcloud.recognizer import ACRCloudRecognizer
+        import json
         
-        # Создаем хеш файла + timestamp для уникальности каждого запроса
-        import time
-        unique_data = file_content + str(time.time()).encode()
-        file_hash = hashlib.md5(unique_data).hexdigest()
-        
-        # Демо-база исполнителей для тестирования (только первые 3 буквы будут использоваться)
-        demo_artists_ru = [
-            'Алла Пугачева',
-            'Виктор Цой',
-            'Земфира',
-            'Баста',
-            'Дима Билан',
-            'Егор Крид',
-            'Любэ',
-            'Машина Времени',
-            'Наутилус Помпилиус',
-            'Сплин'
-        ]
-        
-        demo_artists_en = [
-            'Queen',
-            'Beatles',
-            'Madonna',
-            'Adele',
-            'Coldplay',
-            'Rihanna',
-            'Drake',
-            'Eminem',
-            'Nirvana',
-            'Metallica'
-        ]
-        
-        # Случайно выбираем язык на основе хеша
-        is_russian = int(file_hash[0], 16) % 2 == 0
-        
-        if is_russian:
-            # Выбираем случайного русского исполнителя
-            artist_index = int(file_hash[:4], 16) % len(demo_artists_ru)
-            artist = demo_artists_ru[artist_index]
-            language = 'russian'
-            title = 'Неизвестная песня'
-        else:
-            # Выбираем случайного английского исполнителя
-            artist_index = int(file_hash[:4], 16) % len(demo_artists_en)
-            artist = demo_artists_en[artist_index]
-            language = 'english'
-            title = 'Unknown Song'
-        
-        # Определяем язык исполнителя
-        language = detect_language(artist)
-        
-        # Создаем паттерн вибрации для ПЕРВЫХ 3 БУКВ ИСПОЛНИТЕЛЯ
-        vibration_pattern = create_vibration_pattern(artist, language)
-        
-        logging.info(f"Демо-распознавание: {artist[:3]}... ({language}) - 3 буквы")
-        
-        return {
-            'status': 'success',
-            'title': title,
-            'artist': artist,
-            'album': None,
-            'language': language,
-            'vibration_pattern': vibration_pattern,
-            'score': 0.85
+        # Конфигурация ACRCloud
+        config = {
+            'host': os.getenv('ACRCLOUD_HOST', ''),
+            'access_key': os.getenv('ACRCLOUD_ACCESS_KEY', ''),
+            'access_secret': os.getenv('ACRCLOUD_ACCESS_SECRET', ''),
+            'timeout': 10
         }
+        
+        # Инициализируем распознаватель
+        recognizer = ACRCloudRecognizer(config)
+        
+        # Сохраняем файл временно
+        with tempfile.NamedTemporaryFile(suffix=os.path.splitext(filename)[1], delete=False) as tmp:
+            tmp.write(file_content)
+            tmp_path = tmp.name
+        
+        try:
+            # Распознаем музыку
+            result_json = recognizer.recognize_by_file(tmp_path, 0)
+            result = json.loads(result_json)
+            
+            logging.info(f"ACRCloud response: {result}")
+            
+            # Проверяем статус
+            if result.get('status', {}).get('code') != 0:
+                msg = result.get('status', {}).get('msg', 'Музыка не распознана')
+                return {
+                    'status': 'not_found',
+                    'message': msg
+                }
+            
+            # Извлекаем данные о музыке
+            metadata = result.get('metadata', {})
+            music_list = metadata.get('music', [])
+            
+            if not music_list:
+                return {
+                    'status': 'not_found',
+                    'message': 'Музыка не найдена в базе'
+                }
+            
+            # Берем первый результат (наиболее точный)
+            music = music_list[0]
+            
+            # Извлекаем исполнителя (для вибросигналов)
+            artists = music.get('artists', [])
+            artist = artists[0].get('name', 'Unknown') if artists else 'Unknown'
+            
+            title = music.get('title', 'Unknown')
+            album_info = music.get('album', {})
+            album = album_info.get('name') if album_info else None
+            
+            # Определяем язык ИСПОЛНИТЕЛЯ (не названия)
+            language = detect_language(artist)
+            
+            # Создаем паттерн вибрации для ПЕРВЫХ 3 БУКВ ИСПОЛНИТЕЛЯ
+            vibration_pattern = create_vibration_pattern(artist, language)
+            
+            logging.info(f"Распознано: {title} - {artist} ({language}) - первые 3 буквы")
+            
+            return {
+                'status': 'success',
+                'title': title,
+                'artist': artist,
+                'album': album,
+                'language': language,
+                'vibration_pattern': vibration_pattern,
+                'score': music.get('score', 0)
+            }
+            
+        finally:
+            # Удаляем временный файл
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
                 
     except Exception as e:
-        logging.error(f"Ошибка распознавания: {str(e)}")
+        logging.error(f"Ошибка распознавания ACRCloud: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
         return {
             'status': 'error',
-            'message': f'Ошибка: {str(e)}'
+            'message': f'Ошибка распознавания: {str(e)}'
         }
 
 @api_router.get("/")
