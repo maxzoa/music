@@ -27,10 +27,12 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('autostart') === 'true' && !autoStarted) {
       setAutoStarted(true);
-      // Небольшая задержка для загрузки страницы
+      // Увеличиваем задержку для Android - нужно время на получение разрешений
+      const delay = /Android/i.test(navigator.userAgent) ? 2000 : 500;
+      console.log(`Autostart in ${delay}ms`);
       setTimeout(() => {
         startRecording();
-      }, 500);
+      }, delay);
     }
     
     return () => {
