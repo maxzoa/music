@@ -260,6 +260,18 @@ function App() {
                 </ol>
                 
                 <div className="border-t pt-3 mt-3">
+                  <h4 className="font-semibold text-xs mb-2">Алгоритм вибросигналов:</h4>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <div><strong>1.</strong> Язык: 1 вибро=EN, 2 вибро=RU</div>
+                    <div><strong>2.</strong> Для каждой буквы:</div>
+                    <div className="pl-4">• N вибро = номер группы</div>
+                    <div className="pl-4">• Пауза</div>
+                    <div className="pl-4">• M вибро = номер буквы в группе</div>
+                    <div className="text-xs italic mt-1">Пример "ЗАТ": 2(RU) → 2+3(З) → 1+1(А) → 4+5(Т)</div>
+                  </div>
+                </div>
+                
+                <div className="border-t pt-3 mt-3">
                   <h4 className="font-semibold text-xs mb-2">Группировка букв:</h4>
                   <div className="text-xs text-muted-foreground space-y-1">
                     <div><strong>RU:</strong> А-Д | Е-Й | Й-Н | О-Т | У-Ч | Ш-Ь | Э-Я</div>
