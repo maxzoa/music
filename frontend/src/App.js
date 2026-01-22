@@ -139,7 +139,6 @@ function App() {
               src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/g024atoz_photo_2026-01-22_13-49-18.jpg" 
               alt="MAXZOA" 
               className="w-full h-auto"
-              style={{ filter: 'drop-shadow(0 0 20px rgba(255, 0, 0, 0.5))' }}
             />
           </div>
         </CardHeader>
