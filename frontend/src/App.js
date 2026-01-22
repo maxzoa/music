@@ -235,20 +235,24 @@ function App() {
   };
 
   const stopRecording = () => {
+    console.log('stopRecording called, state:', mediaRecorderRef.current?.state);
+    
+    // Останавливаем таймер СРАЗУ
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      console.log('Timer cleared');
+    }
+    
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      console.log('Stopping recording...');
-      
-      // Сразу останавливаем таймер
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      
+      console.log('Stopping MediaRecorder...');
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setIsProcessing(true);
     } else {
-      console.warn('MediaRecorder is not in recording state:', mediaRecorderRef.current?.state);
+      console.log('MediaRecorder not in recording state:', mediaRecorderRef.current?.state);
+      // Сбрасываем флаг записи если MediaRecorder уже остановлен
+      isRecordingRef.current = false;
     }
   };
 
