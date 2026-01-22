@@ -8,6 +8,7 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+const MAX_RECORDING_TIME = 10; // Максимальное время записи в секундах
 
 function App() {
   const [isRecording, setIsRecording] = useState(false);
@@ -15,6 +16,7 @@ function App() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [autoStarted, setAutoStarted] = useState(false);
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
