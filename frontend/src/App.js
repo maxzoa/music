@@ -131,16 +131,16 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-      <Card className="w-full max-w-md" data-testid="main-card">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-              <Music className="w-8 h-8 text-white" />
-            </div>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#000000' }}>
+      <Card className="w-full max-w-md bg-black border-gray-800" data-testid="main-card">
+        <CardHeader className="text-center pb-4">
+          <div className="flex justify-center mb-6">
+            <img 
+              src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/g024atoz_photo_2026-01-22_13-49-18.jpg" 
+              alt="MAXZOA" 
+              className="w-48 h-auto"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold" data-testid="app-title">Угадай Мелодию</CardTitle>
-          <CardDescription>Читерское приложение для квизов</CardDescription>
         </CardHeader>
         
         <CardContent className="space-y-6">
