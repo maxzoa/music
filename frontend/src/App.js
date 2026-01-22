@@ -45,6 +45,12 @@ function App() {
       setError(null);
       setResult(null);
       
+      // Вибрация при начале записи (протяжная - 500мс)
+      if ('vibrate' in navigator) {
+        navigator.vibrate(500);
+        console.log('✓ Vibration: Recording started');
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: false,
@@ -81,6 +87,12 @@ function App() {
       };
       
       mediaRecorder.onstop = async () => {
+        // Вибрация по окончании записи перед распознаванием (протяжная - 500мс)
+        if ('vibrate' in navigator) {
+          navigator.vibrate(500);
+          console.log('✓ Vibration: Recording stopped, starting recognition');
+        }
+        
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         console.log('Total audio size:', audioBlob.size, 'bytes');
         await recognizeAudio(audioBlob);
