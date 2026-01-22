@@ -8,7 +8,7 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
-const MAX_RECORDING_TIME = 10; // Максимальное время записи в секундах
+const MAX_RECORDING_TIME = 15; // Максимальное время записи в секундах
 
 function App() {
   const [isRecording, setIsRecording] = useState(false);
