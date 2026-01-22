@@ -10,6 +10,15 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 const MAX_RECORDING_TIME = 15; // Максимальное время записи в секундах
 
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ МОДУЛЯ - не сбрасываются при React Strict Mode remount
+let globalHasAutoStarted = false;
+let globalIsRecording = false;
+let globalAutoStartTimeout = null;
+let globalTimerId = null;
+let globalMediaRecorder = null;
+let globalAudioChunks = [];
+let globalStream = null;
+
 function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -17,42 +26,50 @@ function App() {
   const [error, setError] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
   
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const timerRef = useRef(null);
-  const hasAutoStartedRef = useRef(false); // Ref для предотвращения двойного автозапуска
-  const isRecordingRef = useRef(false); // Ref для синхронной проверки состояния записи
-  const autoStartTimeoutRef = useRef(null); // Ref для таймаута автозапуска
+  // Refs для доступа к setState из глобальных функций
+  const settersRef = useRef({
+    setIsRecording,
+    setIsProcessing,
+    setError,
+    setResult,
+    setRecordingTime
+  });
+  
+  // Обновляем settersRef при каждом рендере
+  settersRef.current = {
+    setIsRecording,
+    setIsProcessing,
+    setError,
+    setResult,
+    setRecordingTime
+  };
 
   useEffect(() => {
-    // Используем ref для гарантии однократного выполнения (React Strict Mode вызывает useEffect дважды)
-    if (hasAutoStartedRef.current) {
-      console.log('Autostart already triggered, skipping duplicate');
+    // Проверяем ГЛОБАЛЬНУЮ переменную - она не сбрасывается при remount
+    if (globalHasAutoStarted) {
+      console.log('Autostart already triggered globally, skipping');
       return;
     }
     
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('autostart') === 'true') {
-      hasAutoStartedRef.current = true; // Устанавливаем СРАЗУ до любых асинхронных операций
+      globalHasAutoStarted = true; // Устанавливаем ГЛОБАЛЬНО
       
       const delay = /Android/i.test(navigator.userAgent) ? 2000 : 500;
-      console.log(`Autostart scheduled in ${delay}ms`);
+      console.log(`Autostart scheduled in ${delay}ms (global flag set)`);
       
-      autoStartTimeoutRef.current = setTimeout(() => {
+      globalAutoStartTimeout = setTimeout(() => {
         console.log('Autostart executing...');
-        startRecording();
+        startRecordingGlobal(settersRef);
       }, delay);
     }
     
     // Cleanup function
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      if (autoStartTimeoutRef.current) {
-        clearTimeout(autoStartTimeoutRef.current);
-        autoStartTimeoutRef.current = null;
+      // Очищаем таймаут автозапуска при unmount
+      if (globalAutoStartTimeout) {
+        clearTimeout(globalAutoStartTimeout);
+        globalAutoStartTimeout = null;
       }
     };
   }, []); // Пустой массив зависимостей
