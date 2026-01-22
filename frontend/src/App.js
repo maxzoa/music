@@ -194,37 +194,46 @@ function App() {
 
           {/* Результат */}
           {result && (
-            <Card className="border-2" style={{ borderColor: '#667eea' }} data-testid="result-card">
+            <Card className="border-2 border-red-600 bg-black" data-testid="result-card">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Music className="w-5 h-5" style={{ color: '#667eea' }} />
+                <CardTitle className="text-lg flex items-center gap-2 text-white">
+                  <Music className="w-5 h-5 text-red-600" />
                   Результат
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Название</p>
-                  <p className="font-semibold" data-testid="song-title">{result.title}</p>
+                  <p className="text-sm text-gray-400">Название</p>
+                  <p className="font-semibold text-white" data-testid="song-title">{result.title}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Исполнитель</p>
-                  <p className="font-semibold" data-testid="song-artist">{result.artist}</p>
+                  <p className="text-sm text-gray-400">Исполнитель</p>
+                  <p className="font-semibold text-white" data-testid="song-artist">{result.artist}</p>
                 </div>
                 {result.album && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Альбом</p>
-                    <p className="font-semibold" data-testid="song-album">{result.album}</p>
+                    <p className="text-sm text-gray-400">Альбом</p>
+                    <p className="font-semibold text-white" data-testid="song-album">{result.album}</p>
                   </div>
                 )}
                 <div className="flex items-center gap-2 pt-2">
-                  <Vibrate className="w-4 h-4" style={{ color: '#667eea' }} />
-                  <p className="text-sm">
+                  <Vibrate className="w-4 h-4 text-red-600" />
+                  <p className="text-sm text-white">
                     Язык: <span className="font-semibold" data-testid="song-language">{result.language === 'russian' ? 'Русский 🇷🇺' : 'English 🇬🇧'}</span>
                   </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-3">
+                <p className="text-xs text-gray-500 mt-3">
                   {'vibrate' in navigator ? '✓ Вибросигналы отправлены' : '⚠️ Вибрация не поддерживается в этом браузере'}
                 </p>
+                
+                <div className="border-t border-gray-700 pt-3 mt-3">
+                  <p className="text-xs font-bold text-gray-400 mb-2">Группировка букв:</p>
+                  <div className="text-xs space-y-1">
+                    <div className="text-gray-500 font-bold">RU: А-Д | Е-Й | Й-Н | О-Т | У-Ч | Ш-Ь | Э-Я</div>
+                    <div className="text-gray-500 font-bold">EN: A-E | F-J | K-O | P-T | U-Y | Z</div>
+                  </div>
+                </div>
+                
                 <Button
                   data-testid="new-search-btn"
                   onClick={() => {
@@ -232,54 +241,10 @@ function App() {
                     setError(null);
                   }}
                   variant="outline"
-                  className="w-full mt-4"
+                  className="w-full mt-4 border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
                 >
                   Новый поиск
                 </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Инструкция */}
-          {!result && !isRecording && !isProcessing && (
-            <Card className="bg-muted/50">
-              <CardContent className="pt-6">
-                <h3 className="font-semibold mb-2 text-sm">Как использовать:</h3>
-                <ol className="text-sm space-y-1 text-muted-foreground list-decimal list-inside mb-4">
-                  <li>Разрешите доступ к микрофону</li>
-                  <li>Нажмите на иконку микрофона</li>
-                  <li>Запись автоматически остановится через 15 сек</li>
-                  <li>Получите название + вибросигналы</li>
-                </ol>
-                
-                <div className="border-t pt-3 mt-3">
-                  <h4 className="font-semibold text-xs mb-2">Алгоритм вибросигналов:</h4>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <div><strong>1.</strong> Язык: 1 вибро=EN, 2 вибро=RU</div>
-                    <div><strong>2.</strong> Для каждой буквы:</div>
-                    <div className="pl-4">• N вибро = номер группы</div>
-                    <div className="pl-4">• Пауза</div>
-                    <div className="pl-4">• M вибро = номер буквы в группе</div>
-                    <div className="text-xs italic mt-1">Пример "ЗАТ": 2(RU) → 2+3(З) → 1+1(А) → 4+5(Т)</div>
-                  </div>
-                </div>
-                
-                <div className="border-t pt-3 mt-3">
-                  <h4 className="font-semibold text-xs mb-2">Группировка букв:</h4>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <div><strong>RU:</strong> А-Д | Е-Й | Й-Н | О-Т | У-Ч | Ш-Ь | Э-Я</div>
-                    <div><strong>EN:</strong> A-E | F-J | K-O | P-T | U-Y | Z</div>
-                  </div>
-                </div>
-                
-                <div className="border-t pt-3 mt-3">
-                  <h4 className="font-semibold text-xs mb-2">Автозапуск (MacroDroid):</h4>
-                  <div className="text-xs text-muted-foreground break-all">
-                    <code className="bg-muted px-2 py-1 rounded">
-                      {window.location.origin}/?autostart=true
-                    </code>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           )}
