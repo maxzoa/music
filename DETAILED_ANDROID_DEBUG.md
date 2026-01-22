@@ -58,7 +58,7 @@ MIBOX3 #192.168.8.114
   
   [Список открытых вкладок Chrome на телефоне]
   
-  https://melody-guesser-2.preview.emergentagent.com
+  https://songspy-1.preview.emergentagent.com
   [inspect] [focus tab] [close]
 ```
 

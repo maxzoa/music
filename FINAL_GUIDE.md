@@ -86,7 +86,7 @@ e: 1 вибро (группа A-E) + 5 вибро (буква E)
 ### Автозапуск через MacroDroid:
 
 ```
-https://melody-guesser-2.preview.emergentagent.com/?autostart=true
+https://songspy-1.preview.emergentagent.com/?autostart=true
 ```
 
 При открытии этой ссылки запись начнется автоматически!

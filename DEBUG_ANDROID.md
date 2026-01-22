@@ -35,7 +35,7 @@
 
 1. **Откройте приложение на телефоне:**
    - Зайдите в Chrome на телефоне
-   - Откройте ваше приложение: https://melody-guesser-2.preview.emergentagent.com
+   - Откройте ваше приложение: https://songspy-1.preview.emergentagent.com
 
 2. **На компьютере в chrome://inspect:**
    - Найдите вкладку с вашим приложением

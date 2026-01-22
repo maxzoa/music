@@ -6,7 +6,7 @@ from io import BytesIO
 import os
 
 class MelodyGuesserAPITester:
-    def __init__(self, base_url="https://melody-guesser-2.preview.emergentagent.com"):
+    def __init__(self, base_url="https://songspy-1.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
