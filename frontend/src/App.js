@@ -175,6 +175,7 @@ function App() {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      console.log('Stopping recording...');
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setIsProcessing(true);
@@ -182,6 +183,8 @@ function App() {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+    } else {
+      console.warn('MediaRecorder is not in recording state:', mediaRecorderRef.current?.state);
     }
   };
 
