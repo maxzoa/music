@@ -176,13 +176,16 @@ function App() {
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       console.log('Stopping recording...');
+      
+      // Сразу останавливаем таймер
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setIsProcessing(true);
-      
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
     } else {
       console.warn('MediaRecorder is not in recording state:', mediaRecorderRef.current?.state);
     }
