@@ -169,9 +169,9 @@ function App() {
                     className="w-48 h-48 rounded-full bg-transparent border-0 p-0 animate-pulse"
                   >
                     <img 
-                      src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/81fs3fzq_photo_2026-01-22_14-02-04.jpg"
+                      src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/h4nj9rhi_photo_2026-01-22_14-02-04-removebg-preview.png"
                       alt="Stop"
-                      className="w-full h-full rounded-full"
+                      className="w-full h-full"
                     />
                   </button>
                   <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full animate-ping"></div>
