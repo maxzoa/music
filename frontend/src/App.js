@@ -256,32 +256,32 @@ function App() {
 
           {/* Результат */}
           {result && (
-            <Card className="border-2 border-red-600 bg-black" data-testid="result-card">
+            <Card className="border-2 border-green-600 bg-black" data-testid="result-card">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2 text-white">
-                  <Music className="w-5 h-5 text-red-600" />
+                <CardTitle className="text-lg flex items-center gap-2 text-green-500">
+                  <Music className="w-5 h-5 text-green-600" />
                   Результат
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
                   <p className="text-sm text-gray-400">Название</p>
-                  <p className="font-semibold text-white" data-testid="song-title">{result.title}</p>
+                  <p className="font-bold text-green-400 text-lg" data-testid="song-title">{result.title}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Исполнитель</p>
-                  <p className="font-semibold text-white" data-testid="song-artist">{result.artist}</p>
+                  <p className="font-bold text-green-400 text-lg" data-testid="song-artist">{result.artist}</p>
                 </div>
                 {result.album && (
                   <div>
                     <p className="text-sm text-gray-400">Альбом</p>
-                    <p className="font-semibold text-white" data-testid="song-album">{result.album}</p>
+                    <p className="font-bold text-green-400" data-testid="song-album">{result.album}</p>
                   </div>
                 )}
                 <div className="flex items-center gap-2 pt-2">
-                  <Vibrate className="w-4 h-4 text-red-600" />
+                  <Vibrate className="w-4 h-4 text-green-600" />
                   <p className="text-sm text-white">
-                    Язык: <span className="font-semibold" data-testid="song-language">{result.language === 'russian' ? 'Русский 🇷🇺' : 'English 🇬🇧'}</span>
+                    Язык: <span className="font-bold text-green-400" data-testid="song-language">{result.language === 'russian' ? 'Русский 🇷🇺' : 'English 🇬🇧'}</span>
                   </p>
                 </div>
                 <p className="text-xs text-gray-500 mt-3">
@@ -303,7 +303,7 @@ function App() {
                     setError(null);
                   }}
                   variant="outline"
-                  className="w-full mt-4 border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
+                  className="w-full mt-4 border-green-600 text-green-400 hover:bg-green-600 hover:text-white font-bold"
                 >
                   Новый поиск
                 </Button>
