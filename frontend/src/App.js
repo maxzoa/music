@@ -151,8 +151,7 @@ function App() {
                 data-testid="start-recording-btn"
                 onClick={startRecording}
                 size="lg"
-                className="w-32 h-32 rounded-full text-white shadow-lg transition-transform hover:scale-105"
-                style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+                className="w-32 h-32 rounded-full text-white shadow-lg transition-transform hover:scale-105 bg-red-600 hover:bg-red-700"
               >
                 <Mic className="w-12 h-12" />
               </Button>
