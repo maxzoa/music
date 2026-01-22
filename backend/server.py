@@ -141,32 +141,54 @@ async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
         from acrcloud.recognizer import ACRCloudRecognizer
         import json
         
+        logging.info(f"Starting recognition for {filename}, size: {len(file_content)} bytes")
+        
         # Конфигурация ACRCloud
         config = {
             'host': os.getenv('ACRCLOUD_HOST', ''),
             'access_key': os.getenv('ACRCLOUD_ACCESS_KEY', ''),
             'access_secret': os.getenv('ACRCLOUD_ACCESS_SECRET', ''),
-            'timeout': 10
+            'timeout': 15  # Увеличиваем таймаут до 15 секунд
         }
         
         # Инициализируем распознаватель
         recognizer = ACRCloudRecognizer(config)
         
+        # Определяем расширение файла
+        file_ext = os.path.splitext(filename)[1]
+        if not file_ext or file_ext == '.webm':
+            # Для webm или без расширения пробуем как есть
+            file_ext = '.webm'
+        
         # Сохраняем файл временно
-        with tempfile.NamedTemporaryFile(suffix=os.path.splitext(filename)[1], delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
             tmp.write(file_content)
             tmp_path = tmp.name
         
+        logging.info(f"Temp file created: {tmp_path}")
+        
         try:
-            # Распознаем музыку
-            result_json = recognizer.recognize_by_file(tmp_path, 0)
+            # Распознаем музыку - используем начальные 15 секунд
+            result_json = recognizer.recognize_by_file(tmp_path, 0, 15)
             result = json.loads(result_json)
             
-            logging.info(f"ACRCloud response: {result}")
+            logging.info(f"ACRCloud response code: {result.get('status', {}).get('code')}")
+            logging.info(f"ACRCloud response msg: {result.get('status', {}).get('msg')}")
             
             # Проверяем статус
-            if result.get('status', {}).get('code') != 0:
+            status_code = result.get('status', {}).get('code')
+            if status_code != 0:
                 msg = result.get('status', {}).get('msg', 'Музыка не распознана')
+                
+                # Более информативные сообщения
+                if status_code == 1001:
+                    msg = 'Музыка не найдена. Попробуйте: 1) Записать ближе к источнику звука 2) Убрать фоновый шум 3) Записать более известную песню'
+                elif status_code == 2004:
+                    msg = 'Не удалось декодировать аудиофайл. Попробуйте записать заново'
+                elif status_code == 3001:
+                    msg = 'Превышен лимит запросов. Подождите немного'
+                
+                logging.warning(f"Recognition failed: {msg}")
                 return {
                     'status': 'not_found',
                     'message': msg
@@ -179,7 +201,7 @@ async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
             if not music_list:
                 return {
                     'status': 'not_found',
-                    'message': 'Музыка не найдена в базе'
+                    'message': 'Музыка не найдена в базе ACRCloud'
                 }
             
             # Берем первый результат (наиболее точный)
@@ -199,7 +221,10 @@ async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
             # Создаем паттерн вибрации для ПЕРВЫХ 3 БУКВ ИСПОЛНИТЕЛЯ
             vibration_pattern = create_vibration_pattern(artist, language)
             
-            logging.info(f"Распознано: {title} - {artist} ({language}) - первые 3 буквы")
+            score = music.get('score', 0)
+            
+            logging.info(f"✓ Распознано: {title} - {artist} ({language}), score: {score}")
+            logging.info(f"  Первые 3 буквы: {''.join([c for c in artist if c.isalpha()])[:3]}")
             
             return {
                 'status': 'success',
@@ -208,13 +233,14 @@ async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
                 'album': album,
                 'language': language,
                 'vibration_pattern': vibration_pattern,
-                'score': music.get('score', 0)
+                'score': score
             }
             
         finally:
             # Удаляем временный файл
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
+                logging.info(f"Temp file deleted: {tmp_path}")
                 
     except Exception as e:
         logging.error(f"Ошибка распознавания ACRCloud: {str(e)}")
