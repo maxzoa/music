@@ -58,6 +58,13 @@ function App() {
   }, []); // Пустой массив зависимостей
 
   const startRecording = async () => {
+    // Защита от двойного вызова с использованием ref (синхронная проверка)
+    if (isRecordingRef.current) {
+      console.log('Recording already in progress, ignoring duplicate call');
+      return;
+    }
+    isRecordingRef.current = true;
+    
     try {
       setError(null);
       setResult(null);
@@ -66,16 +73,20 @@ function App() {
       
       // Вибрация при начале записи (протяжная - 500мс)
       if ('vibrate' in navigator) {
-        navigator.vibrate(500);
-        console.log('✓ Vibration: Recording started');
+        try {
+          navigator.vibrate(500);
+          console.log('✓ Vibration: Recording started');
+        } catch (e) {
+          console.log('Vibration blocked:', e.message);
+        }
       }
       
       // Запрашиваем разрешения с более простыми constraints для Android
       const constraints = /Android/i.test(navigator.userAgent) ? {
         audio: {
-          echoCancellation: true,  // Включаем для Android
-          noiseSuppression: true,   // Включаем для Android
-          autoGainControl: true,    // Включаем для Android
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
         }
       } : {
         audio: {
@@ -125,6 +136,9 @@ function App() {
       mediaRecorder.onstop = async () => {
         console.log(`Recording stopped. Total chunks: ${chunksReceived}`);
         
+        // Сбрасываем флаг записи
+        isRecordingRef.current = false;
+        
         // Проверяем, что есть данные
         if (audioChunksRef.current.length === 0) {
           setError('Запись не содержит данных. Попробуйте еще раз.');
@@ -135,8 +149,12 @@ function App() {
         
         // Вибрация по окончании записи перед распознаванием (протяжная - 500мс)
         if ('vibrate' in navigator) {
-          navigator.vibrate(500);
-          console.log('✓ Vibration: Recording stopped, starting recognition');
+          try {
+            navigator.vibrate(500);
+            console.log('✓ Vibration: Recording stopped, starting recognition');
+          } catch (e) {
+            console.log('Vibration blocked:', e.message);
+          }
         }
         
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
@@ -159,8 +177,15 @@ function App() {
         setError('Ошибка записи: ' + event.error);
         setIsRecording(false);
         setIsProcessing(false);
+        isRecordingRef.current = false;
         stream.getTracks().forEach(track => track.stop());
       };
+      
+      // Очищаем предыдущий таймер если есть
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       
       // Запрашиваем данные каждую секунду для более стабильной записи
       console.log('Starting MediaRecorder...');
@@ -171,24 +196,41 @@ function App() {
       
       console.log('MediaRecorder state:', mediaRecorder.state);
       
-      // Используем более точный таймер
-      let startTime = Date.now();
-      timerRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        setRecordingTime(elapsed);
+      // Используем setTimeout вместо setInterval для предотвращения накопления вызовов
+      const startTime = Date.now();
+      const maxDuration = MAX_RECORDING_TIME * 1000;
+      
+      const updateTimer = () => {
+        // Проверяем, что запись всё ещё активна
+        if (!isRecordingRef.current && mediaRecorderRef.current?.state !== 'recording') {
+          console.log('Timer stopped - recording not active');
+          return;
+        }
+        
+        const elapsed = Date.now() - startTime;
+        const elapsedSeconds = Math.floor(elapsed / 1000);
+        setRecordingTime(elapsedSeconds);
         
         // Автоматическая остановка через MAX_RECORDING_TIME секунд
-        if (elapsed >= MAX_RECORDING_TIME) {
+        if (elapsed >= maxDuration) {
           console.log('Max recording time reached, stopping...');
           stopRecording();
+          return;
         }
-      }, 100); // Обновляем каждые 100мс для плавности
+        
+        // Планируем следующее обновление
+        timerRef.current = setTimeout(updateTimer, 100);
+      };
+      
+      // Запускаем таймер
+      timerRef.current = setTimeout(updateTimer, 100);
       
     } catch (err) {
       console.error('Error starting recording:', err);
       setError('Не удалось получить доступ к микрофону. Разрешите доступ в настройках браузера.');
       setIsRecording(false);
       setIsProcessing(false);
+      isRecordingRef.current = false;
     }
   };
 
