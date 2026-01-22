@@ -163,18 +163,17 @@ function App() {
             {isRecording && (
               <div className="flex flex-col items-center space-y-3">
                 <div className="relative">
-                  <Button
+                  <button
                     data-testid="stop-recording-btn"
                     onClick={stopRecording}
-                    size="lg"
-                    className="w-24 h-24 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg animate-pulse"
-                    style={{ 
-                      boxShadow: '0 0 30px rgba(255, 0, 0, 0.8), 0 0 60px rgba(255, 0, 0, 0.5)',
-                      border: '2px solid rgba(255, 0, 0, 0.9)'
-                    }}
+                    className="w-24 h-24 rounded-full bg-transparent border-0 p-0 animate-pulse"
                   >
-                    <Square className="w-10 h-10" />
-                  </Button>
+                    <img 
+                      src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/81fs3fzq_photo_2026-01-22_14-02-04.jpg"
+                      alt="Stop"
+                      className="w-full h-full rounded-full"
+                    />
+                  </button>
                   <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full animate-ping"></div>
                 </div>
                 <div className="text-lg font-mono font-bold text-white" data-testid="recording-time">{formatTime(recordingTime)}</div>
