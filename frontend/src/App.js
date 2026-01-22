@@ -70,7 +70,14 @@ function App() {
       setRecordingTime(0);
       
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        setRecordingTime(prev => {
+          const newTime = prev + 1;
+          // Автоматическая остановка через 10 секунд
+          if (newTime >= MAX_RECORDING_TIME) {
+            stopRecording();
+          }
+          return newTime;
+        });
       }, 1000);
       
     } catch (err) {
