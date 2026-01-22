@@ -153,9 +153,9 @@ function App() {
                 className="w-48 h-48 rounded-full transition-transform hover:scale-105 bg-transparent border-0 p-0"
               >
                 <img 
-                  src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/81fs3fzq_photo_2026-01-22_14-02-04.jpg"
+                  src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/h4nj9rhi_photo_2026-01-22_14-02-04-removebg-preview.png"
                   alt="Record"
-                  className="w-full h-full rounded-full"
+                  className="w-full h-full"
                 />
               </button>
             )}
