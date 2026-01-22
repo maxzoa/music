@@ -166,7 +166,7 @@ function App() {
                   <button
                     data-testid="stop-recording-btn"
                     onClick={stopRecording}
-                    className="w-24 h-24 rounded-full bg-transparent border-0 p-0 animate-pulse"
+                    className="w-48 h-48 rounded-full bg-transparent border-0 p-0 animate-pulse"
                   >
                     <img 
                       src="https://customer-assets.emergentagent.com/job_melody-guesser-2/artifacts/81fs3fzq_photo_2026-01-22_14-02-04.jpg"
