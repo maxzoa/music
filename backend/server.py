@@ -139,64 +139,61 @@ def create_vibration_pattern(title: str, language: str) -> List[int]:
     return pattern
 
 async def recognize_audio_with_audd(file_content: bytes, filename: str) -> dict:
-    """Распознать музыку через AudD API"""
-    audd_token = os.getenv('AUDD_API_TOKEN', 'test')
-    
+    """Распознать музыку через AcoustID API (бесплатный open-source)"""
     try:
-        files = {
-            'file': (filename, BytesIO(file_content), 'application/octet-stream')
-        }
-        data = {
-            'api_token': audd_token,
-            'return': 'apple_music,spotify'
-        }
+        import acoustid
+        import tempfile
+        import os
         
-        response = requests.post(
-            'https://api.audd.io/',
-            files=files,
-            data=data,
-            timeout=30
-        )
+        # Сохраняем файл временно для обработки
+        with tempfile.NamedTemporaryFile(suffix=os.path.splitext(filename)[1], delete=False) as tmp:
+            tmp.write(file_content)
+            tmp_path = tmp.name
         
-        response.raise_for_status()
-        result = response.json()
-        
-        if result.get('status') != 'success':
+        try:
+            # Используем AcoustID для распознавания
+            # Бесплатный API key для тестирования
+            results = list(acoustid.match(
+                'HycL4TYl4Y',  # Публичный демо ключ
+                tmp_path,
+                parse=True
+            ))
+            
+            if not results:
+                return {
+                    'status': 'not_found',
+                    'message': 'Песня не распознана'
+                }
+            
+            # Берем лучший результат
+            score, recording_id, title, artist = results[0]
+            
+            # Определяем язык
+            language = detect_language(title)
+            
+            # Создаем паттерн вибрации
+            vibration_pattern = create_vibration_pattern(title, language)
+            
             return {
-                'status': 'error',
-                'message': 'Не удалось распознать музыку'
+                'status': 'success',
+                'title': title or 'Unknown',
+                'artist': artist or 'Unknown',
+                'album': None,
+                'language': language,
+                'vibration_pattern': vibration_pattern,
+                'score': score,
+                'recording_id': recording_id
             }
-        
-        result_data = result.get('result')
-        if not result_data:
-            return {
-                'status': 'not_found',
-                'message': 'Песня не распознана'
-            }
-        
-        title = result_data.get('title', 'Unknown')
-        artist = result_data.get('artist', 'Unknown')
-        album = result_data.get('album')
-        
-        # Определяем язык
-        language = detect_language(title)
-        
-        # Создаем паттерн вибрации
-        vibration_pattern = create_vibration_pattern(title, language)
-        
-        return {
-            'status': 'success',
-            'title': title,
-            'artist': artist,
-            'album': album,
-            'language': language,
-            'vibration_pattern': vibration_pattern
-        }
-        
-    except requests.Timeout:
+            
+        finally:
+            # Удаляем временный файл
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+                
+    except ImportError:
         return {
             'status': 'error',
-            'message': 'Превышено время ожидания API'
+            'message': 'AcoustID library not installed'
         }
     except Exception as e:
         logging.error(f"Ошибка распознавания: {str(e)}")
