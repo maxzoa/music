@@ -172,7 +172,9 @@ function App() {
                   <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full animate-ping"></div>
                 </div>
                 <div className="text-lg font-mono font-bold" data-testid="recording-time">{formatTime(recordingTime)}</div>
-                <p className="text-sm text-muted-foreground">Запись... Нажмите для остановки</p>
+                <p className="text-sm text-muted-foreground">
+                  Запись... ({MAX_RECORDING_TIME - recordingTime} сек до автоостановки)
+                </p>
               </div>
             )}
             
