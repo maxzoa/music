@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import '@/App.css';
-import { Mic, Square, Music, Vibrate } from 'lucide-react';
+import { Music, Vibrate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
