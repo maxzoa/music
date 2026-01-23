@@ -2,7 +2,7 @@
   "name": "MaxZoa Cheater",
   "short_name": "MaxZoa",
   "description": "Music recognizer with vibration",
-  "start_url": "/?autostart=true",
+  "start_url": ".?autostart=true"
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
