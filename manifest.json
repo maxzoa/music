@@ -3,7 +3,7 @@
   "short_name": "MaxZoa",
   "description": "Music recognizer with vibration",
 
-  "start_url": ".?autostart=true",
+  "start_url": ".",
   "scope": ".",
 
   "display": "standalone",
