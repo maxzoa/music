@@ -2,12 +2,15 @@
   "name": "MaxZoa Cheater",
   "short_name": "MaxZoa",
   "description": "Music recognizer with vibration",
+
   "start_url": ".?autostart=true",
   "scope": ".",
+
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "orientation": "portrait",
+
   "icons": [
     {
       "src": "images/icon.png",
@@ -19,7 +22,9 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-   "screenshots": [
+  ],
+
+  "screenshots": [
     {
       "src": "images/screen1.png",
       "sizes": "1080x1920",
